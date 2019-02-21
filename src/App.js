@@ -15,7 +15,7 @@ class App extends Component {
             mediaStreamSource: null,
             buf: new Float32Array(1024),
             minSamples: 0,
-            ac: null,
+            noteNames: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"],
             good_enough_correlation: 0.9 // this is the "bar" for how close a correlation needs to be
         }
     }
@@ -39,8 +39,6 @@ class App extends Component {
     }
 
     onData = (recordedBlob) => {
-        console.log('chunk of real-time data is: ', recordedBlob);
-
         const constraints = { audio: true };
         window.navigator.mediaDevices.getUserMedia(constraints).then(mediaStream => {
             let mediaStreamSource = this.state.audioContext.createMediaStreamSource(mediaStream);
@@ -93,14 +91,14 @@ class App extends Component {
                 // we know best_offset >=1,
                 // since foundGoodCorrelation cannot go to true until the second pass (offset=1), and
                 // we can't drop into this clause until the following pass (else if).
-                let shift = (correlation[ best_offset + 1 ] - correlation[ best_offset - 1 ]) / correlation[ best_offset ];
+                let shift = (correlations[ best_offset + 1 ] - correlations[ best_offset - 1 ]) / correlations[ best_offset ];
                 return sampleRate / (best_offset = (8 * shift))
             }
             lastCorrelation = correlation;
         }
 
         if (best_correlation > 0.01) {
-            console.log("f = " + sampleRate/best_offset + "Hz (rms: " + rms + " confidence: " + best_correlation + ")")
+            console.log("f = " + sampleRate / best_offset + "Hz (rms: " + rms + " confidence: " + best_correlation + ")")
             return sampleRate / best_offset;
         }
         return -1;
@@ -108,9 +106,22 @@ class App extends Component {
 
     updatePitch = () => {
         this.state.analyzer.getFloatTimeDomainData(this.state.buf);
-        let autocorrelate = this.autoCorrelate(this.state.buf, this.state.audioContext.sampleRate);
-        this.setState({ac: autocorrelate})
-        console.log(this.state.ac)
+        let ac = this.autoCorrelate(this.state.buf, this.state.audioContext.sampleRate);
+
+        if (ac == -1) {
+            console.log('vague')
+        } else {
+            let pitch = ac;
+            let note = this.noteFromPitch(pitch)
+            let noteName = this.state.noteNames[note % 12]
+            console.log('note name', noteName)
+        }
+
+    }
+
+    noteFromPitch = (frequency) => {
+        let noteNum = 12 * (Math.log(frequency / 440) / Math.log(2))
+        return Math.round( noteNum ) + 69;
     }
 
     onStop(recordedBlob) {
