@@ -108,15 +108,14 @@ class App extends Component {
         this.state.analyzer.getFloatTimeDomainData(this.state.buf);
         let ac = this.autoCorrelate(this.state.buf, this.state.audioContext.sampleRate);
 
-        if (ac == -1) {
-            console.log('vague')
+        if (ac === -1) {
+            //sound is too soft to process
         } else {
             let pitch = ac;
             let note = this.noteFromPitch(pitch)
             let noteName = this.state.noteNames[note % 12]
-            console.log('note name', noteName)
+            console.log(noteName)
         }
-
     }
 
     noteFromPitch = (frequency) => {
