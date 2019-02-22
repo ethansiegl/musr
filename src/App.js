@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import './App.css';
 import { ReactMic } from 'react-mic';
+import { Button } from 'semantic-ui-react';
 
 class App extends Component {
     /* Originally author
@@ -22,6 +23,8 @@ class App extends Component {
 
     startRecording = () => {
         let audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        // exposes frequency data on stream
         let analyzer = audioContext.createAnalyser();
         analyzer.fftSize = 2048;
 
@@ -56,8 +59,8 @@ class App extends Component {
         let foundGoodCorrelation = false;
         let correlations = new Array(max_samples);
 
-        for (var i = 0; i < size; i++) {
-            var val = buf[ i ];
+        for (let i = 0; i < size; i++) {
+            let val = buf[ i ];
             rms += val * val;
         }
 
@@ -105,13 +108,13 @@ class App extends Component {
     }
 
     updatePitch = () => {
+        //copy waveform data into a Float32Array
         this.state.analyzer.getFloatTimeDomainData(this.state.buf);
-        let ac = this.autoCorrelate(this.state.buf, this.state.audioContext.sampleRate);
+        let pitch = this.autoCorrelate(this.state.buf, this.state.audioContext.sampleRate);
 
-        if (ac === -1) {
+        if (pitch === -1) {
             //sound is too soft to process
         } else {
-            let pitch = ac;
             let note = this.noteFromPitch(pitch)
             let noteName = this.state.noteNames[note % 12]
             console.log(noteName)
@@ -129,17 +132,21 @@ class App extends Component {
 
     render() {
         return (
-            <div>
-                <ReactMic
-                    record={this.state.record}
-                    className="sound-wave"
-                    onStop={this.onStop}
-                    onData={this.onData}
-                    strokeColor="#000000"
-                    backgroundColor="#FF4081"/>
-                <button onClick={this.startRecording} type="button">Start</button>
-                <button onClick={this.stopRecording} type="button">Stop</button>
-            </div>
+            <React.Fragment>
+                <div style={{ display: '' }}>
+                    <ReactMic
+                        record={this.state.record}
+                        className="sound-wave"
+                        onStop={this.onStop}
+                        onData={this.onData}
+                        strokeColor="#000000"
+                        backgroundColor="#fff"/>
+                </div>
+
+                <Button primary onClick={this.startRecording}>Start</Button>
+                <Button secondary onClick={this.stopRecording}>Stop</Button>
+
+            </React.Fragment>
         );
     }
 }
