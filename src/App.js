@@ -17,6 +17,7 @@ class App extends Component {
             buf: new Float32Array(1024),
             minSamples: 0,
             noteNames: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"],
+            noteName: null,
             good_enough_correlation: 0.9 // this is the "bar" for how close a correlation needs to be
         }
     }
@@ -101,7 +102,7 @@ class App extends Component {
         }
 
         if (best_correlation > 0.01) {
-            console.log("f = " + sampleRate / best_offset + "Hz (rms: " + rms + " confidence: " + best_correlation + ")")
+            //console.log("f = " + sampleRate / best_offset + "Hz (rms: " + rms + " confidence: " + best_correlation + ")")
             return sampleRate / best_offset;
         }
         return -1;
@@ -117,7 +118,11 @@ class App extends Component {
         } else {
             let note = this.noteFromPitch(pitch)
             let noteName = this.state.noteNames[note % 12]
-            console.log(noteName)
+            if (noteName) {
+                console.log(this.state)
+                console.log(noteName)
+                this.setState({noteNate: noteName})
+            }
         }
     }
 
@@ -133,7 +138,7 @@ class App extends Component {
     render() {
         return (
             <React.Fragment>
-                <div style={{ display: '' }}>
+                <div style={{ display: 'hide' }}>
                     <ReactMic
                         record={this.state.record}
                         className="sound-wave"
@@ -142,6 +147,8 @@ class App extends Component {
                         strokeColor="#000000"
                         backgroundColor="#fff"/>
                 </div>
+
+                <h1>{this.state.noteName}</h1>
 
                 <Button primary onClick={this.startRecording}>Start</Button>
                 <Button secondary onClick={this.stopRecording}>Stop</Button>
