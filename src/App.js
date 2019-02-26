@@ -14,10 +14,11 @@ class App extends Component {
             record: false,
             context: null,
             analyzer: null,
+            freeze: null,
             mediaStreamSource: null,
             buf: new Float32Array(1024),
             noteNames: [ "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" ],
-            noteName: '-',
+            noteInput: '-',
             noteToPlay: null,
         }
     }
@@ -40,8 +41,8 @@ class App extends Component {
     stopRecording = () => {
         this.setState({
             record: false,
-            noteName: '-',
-            noteToPlay: '- '
+            noteInput: '-',
+            noteToPlay: null,
         });
     }
 
@@ -50,7 +51,7 @@ class App extends Component {
         window.navigator.mediaDevices.getUserMedia(constraints).then(mediaStream => {
             let mediaStreamSource = this.state.audioContext.createMediaStreamSource(mediaStream);
             mediaStreamSource.connect(this.state.analyzer);
-            this.updatePitch()
+            this.updatePitch();
         })
     }
 
@@ -65,7 +66,7 @@ class App extends Component {
             let note = this.noteFromPitch(pitch)
             let noteName = this.state.noteNames[ note % 12 ]
             if (noteName) {
-                this.setState({ noteName: noteName })
+                this.setState({ noteInput: noteName })
             }
         }
     }
@@ -75,53 +76,54 @@ class App extends Component {
         return Math.round(noteNum) + 69;
     }
 
-    onStop = (recordedBlob) => {}
+    onStop = (recordedBlob) => {
+    }
 
     getRandomNote = () => {
         let noteToPlay = this.state.noteNames[ Math.floor(Math.random() * 11) ]
         this.setState({ noteToPlay: noteToPlay })
     }
 
+    isPlayedNoteCorrect = () => {
+        if (this.state.noteToPlay === this.state.noteInput) {
+            return <h1>Good job!</h1>
+        }
+    }
+
 
     render() {
         return (
             <React.Fragment>
-                <Menu
-                    borderless
-                    style={{ marginBottom: '5em' }}
-                >
+                {/* Header */}
+                <Menu borderless style={{ marginBottom: '2em' }}>
                     <Menu.Item header>Musr</Menu.Item>
                 </Menu>
+
                 <Container text>
+                    <Button primary onClick={this.startRecording}>Start</Button>
+                    <Button secondary onClick={this.stopRecording}>Stop</Button>
+
                     {/* Mic */}
                     <div style={{ display: 'none' }}>
                         <ReactMic
                             record={this.state.record}
-                            className="sound-wave"
                             onStop={this.onStop}
-                            onData={this.onData}
-                            strokeColor="#000000"
-                            backgroundColor="#fff"/>
+                            onData={this.onData}/>
                     </div>
 
-                    <h1>{this.state.noteName}</h1>
-
-                    <Button primary onClick={this.startRecording}>Start</Button>
-                    <Button secondary onClick={this.stopRecording}>Stop</Button>
+                    <h1>{this.state.noteInput}</h1>
 
                     {/* Allow user to toggle new note */}
                     {this.state.noteToPlay &&
-                        <div>
-                            <br/>
-                            <Button primary onClick={this.getRandomNote}>New note</Button>
-                            <h1>Play {this.state.noteToPlay}</h1>
-                        </div>
+                    <div>
+                        <br/>
+                        <Button primary onClick={this.getRandomNote}>New note</Button>
+                        <h1>Play {this.state.noteToPlay}</h1>
+                    </div>
                     }
 
-                    {/* If note played matches note prompt show good job message */}
-                    {this.state.noteToPlay === this.state.noteName &&
-                        <h1>Nice</h1>
-                    }
+                    {this.isPlayedNoteCorrect()}
+
                 </Container>
             </React.Fragment>
         );
