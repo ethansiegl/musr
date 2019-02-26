@@ -1,10 +1,11 @@
 import React, { Component } from 'react';
 import './App.css';
 import { ReactMic } from 'react-mic';
-import { Button } from 'semantic-ui-react';
+import { Button, Menu, Container } from 'semantic-ui-react';
+import { autoCorrelate } from './algorithm';
 
 class App extends Component {
-    /* Originally author
+    /* Original author
     * https://github.com/cwilso/pitchdetect
     * */
     constructor(props) {
@@ -15,11 +16,9 @@ class App extends Component {
             analyzer: null,
             mediaStreamSource: null,
             buf: new Float32Array(1024),
-            minSamples: 0,
-            noteNames: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"],
+            noteNames: [ "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" ],
             noteName: '-',
             noteToPlay: null,
-            good_enough_correlation: 0.9 // this is the "bar" for how close a correlation needs to be
         }
     }
 
@@ -40,7 +39,9 @@ class App extends Component {
 
     stopRecording = () => {
         this.setState({
-            record: false
+            record: false,
+            noteName: '-',
+            noteToPlay: '- '
         });
     }
 
@@ -53,116 +54,75 @@ class App extends Component {
         })
     }
 
-    autoCorrelate = (buf, sampleRate) => {
-        let size = buf.length;
-        let max_samples = Math.floor(size / 2);
-        let best_offset = -1;
-        let best_correlation = 0;
-        let rms = 0;
-        let foundGoodCorrelation = false;
-        let correlations = new Array(max_samples);
-
-        for (let i = 0; i < size; i++) {
-            let val = buf[ i ];
-            rms += val * val;
-        }
-
-        rms = Math.sqrt(rms / size);
-        if (rms < 0.01) //not enough signal
-            return -1
-
-        let lastCorrelation = 1;
-        for (let offset = this.state.minSamples; offset < max_samples; offset++) {
-            let correlation = 0;
-
-            for (let i = 0; i < max_samples; i++) {
-                correlation += Math.abs((buf[ i ]) - (buf[ i + offset ]));
-            }
-
-            correlation = 1 - (correlation / max_samples);
-            correlations[ offset ] = correlation;
-            if ((correlation > this.state.good_enough_correlation) && (correlation > lastCorrelation)) {
-                foundGoodCorrelation = true;
-                if (correlation > best_correlation) {
-                    best_correlation = correlation;
-                    best_offset = offset;
-                }
-            } else if (foundGoodCorrelation) {
-                // short-circuit - we found a good correlation, then a bad one, so we'd just be seeing copies from here.
-                // Now we need to tweak the offset - by interpolating between the values to the left and right of the
-                // best offset, and shifting it a bit.  This is complex, and HACKY in this code (happy to take PRs!) -
-                // we need to do a curve fit on correlations[] around best_offset in order to better determine precise
-                // (anti-aliased) offset.
-
-                // we know best_offset >=1,
-                // since foundGoodCorrelation cannot go to true until the second pass (offset=1), and
-                // we can't drop into this clause until the following pass (else if).
-                let shift = (correlations[ best_offset + 1 ] - correlations[ best_offset - 1 ]) / correlations[ best_offset ];
-                return sampleRate / (best_offset = (8 * shift))
-            }
-            lastCorrelation = correlation;
-        }
-
-        if (best_correlation > 0.01) {
-            //console.log("f = " + sampleRate / best_offset + "Hz (rms: " + rms + " confidence: " + best_correlation + ")")
-            return sampleRate / best_offset;
-        }
-        return -1;
-    }
-
     updatePitch = () => {
         //copy waveform data into a Float32Array
         this.state.analyzer.getFloatTimeDomainData(this.state.buf);
-        let pitch = this.autoCorrelate(this.state.buf, this.state.audioContext.sampleRate);
+        let pitch = autoCorrelate(this.state.buf, this.state.audioContext.sampleRate);
 
         if (pitch === -1) {
             //sound is too soft to process
         } else {
             let note = this.noteFromPitch(pitch)
-            let noteName = this.state.noteNames[note % 12]
+            let noteName = this.state.noteNames[ note % 12 ]
             if (noteName) {
-                this.setState({noteName: noteName})
+                this.setState({ noteName: noteName })
             }
         }
     }
 
     noteFromPitch = (frequency) => {
         let noteNum = 12 * (Math.log(frequency / 440) / Math.log(2))
-        return Math.round( noteNum ) + 69;
+        return Math.round(noteNum) + 69;
     }
 
-    onStop(recordedBlob) {}
+    onStop = (recordedBlob) => {}
 
     getRandomNote = () => {
-        let noteToPlay = this.state.noteNames[Math.floor(Math.random() * 11)]
-        this.setState({noteToPlay: noteToPlay})
+        let noteToPlay = this.state.noteNames[ Math.floor(Math.random() * 11) ]
+        this.setState({ noteToPlay: noteToPlay })
     }
 
 
     render() {
         return (
             <React.Fragment>
-                <div style={{ display: 'hide' }}>
-                    <ReactMic
-                        record={this.state.record}
-                        className="sound-wave"
-                        onStop={this.onStop}
-                        onData={this.onData}
-                        strokeColor="#000000"
-                        backgroundColor="#fff"/>
-                </div>
-
-                {this.state.noteToPlay &&
-                    <div>
-                        <Button primary onClick={this.getRandomNote}>New note</Button>
-                        <h1>Play a {this.state.noteToPlay}</h1>
+                <Menu
+                    borderless
+                    style={{ marginBottom: '5em' }}
+                >
+                    <Menu.Item header>Musr</Menu.Item>
+                </Menu>
+                <Container text>
+                    {/* Mic */}
+                    <div style={{ display: 'none' }}>
+                        <ReactMic
+                            record={this.state.record}
+                            className="sound-wave"
+                            onStop={this.onStop}
+                            onData={this.onData}
+                            strokeColor="#000000"
+                            backgroundColor="#fff"/>
                     </div>
-                }
-                <h1>{this.state.noteName}</h1>
 
-                <Button primary onClick={this.startRecording}>Start</Button>
-                <Button secondary onClick={this.stopRecording}>Stop</Button>
+                    <h1>{this.state.noteName}</h1>
 
+                    <Button primary onClick={this.startRecording}>Start</Button>
+                    <Button secondary onClick={this.stopRecording}>Stop</Button>
+
+                    {/* Allow user to toggle new note */}
+                    {this.state.noteToPlay &&
+                        <div>
+                            <br/>
+                            <Button primary onClick={this.getRandomNote}>New note</Button>
+                            <h1>Play {this.state.noteToPlay}</h1>
+                        </div>
+                    }
+
+                    {/* If note played matches note prompt show good job message */}
+                    {this.state.noteToPlay === this.state.noteName &&
+                        <h1>Nice</h1>
+                    }
+                </Container>
             </React.Fragment>
         );
     }
