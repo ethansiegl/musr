@@ -19,6 +19,7 @@ class App extends Component {
             buf: new Float32Array(1024),
             noteNames: [ "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" ],
             noteInput: '-',
+            isCorrect: false,
             noteToPlay: null,
         }
     }
@@ -41,18 +42,21 @@ class App extends Component {
     stopRecording = () => {
         this.setState({
             record: false,
-            noteInput: '-',
-            noteToPlay: null,
+            noteInput: this.state.noteInput,
+            noteToPlay: this.state.noteToPlay,
         });
     }
 
     onData = (recordedBlob) => {
         const constraints = { audio: true };
-        window.navigator.mediaDevices.getUserMedia(constraints).then(mediaStream => {
-            let mediaStreamSource = this.state.audioContext.createMediaStreamSource(mediaStream);
-            mediaStreamSource.connect(this.state.analyzer);
-            this.updatePitch();
-        })
+
+        if (this.state.record) {
+            window.navigator.mediaDevices.getUserMedia(constraints).then(mediaStream => {
+                let mediaStreamSource = this.state.audioContext.createMediaStreamSource(mediaStream);
+                mediaStreamSource.connect(this.state.analyzer);
+                this.updatePitch();
+            })
+        }
     }
 
     updatePitch = () => {
@@ -81,12 +85,19 @@ class App extends Component {
 
     getRandomNote = () => {
         let noteToPlay = this.state.noteNames[ Math.floor(Math.random() * 11) ]
-        this.setState({ noteToPlay: noteToPlay })
+        this.setState({ noteToPlay: noteToPlay, record: true, isCorrect: false })
     }
 
     isPlayedNoteCorrect = () => {
         if (this.state.noteToPlay === this.state.noteInput) {
-            return <h1>Good job!</h1>
+            this.stopRecording()
+            //return
+        }
+    }
+
+    componentDidUpdate = () => {
+        if (this.state.noteToPlay === this.state.noteInput) {
+            this.setState({ record: false, inputNote: '-', noteToPlay: '-', isCorrect: true })
         }
     }
 
@@ -114,15 +125,19 @@ class App extends Component {
                     <h1>{this.state.noteInput}</h1>
 
                     {/* Allow user to toggle new note */}
-                    {this.state.noteToPlay &&
+                    {this.state.record &&
                     <div>
                         <br/>
-                        <Button primary onClick={this.getRandomNote}>New note</Button>
                         <h1>Play {this.state.noteToPlay}</h1>
                     </div>
                     }
 
-                    {this.isPlayedNoteCorrect()}
+                    {this.state.isCorrect &&
+                    <div>
+                        <Button primary onClick={this.getRandomNote}>New note</Button>
+                        <h1>Good job!</h1>
+                    </div>
+                    }
 
                 </Container>
             </React.Fragment>
