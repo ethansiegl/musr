@@ -17,12 +17,14 @@ class App extends Component {
             buf: new Float32Array(1024),
             minSamples: 0,
             noteNames: ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"],
-            noteName: null,
+            noteName: '-',
+            noteToPlay: null,
             good_enough_correlation: 0.9 // this is the "bar" for how close a correlation needs to be
         }
     }
 
     startRecording = () => {
+        this.getRandomNote();
         let audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
         // exposes frequency data on stream
@@ -119,9 +121,7 @@ class App extends Component {
             let note = this.noteFromPitch(pitch)
             let noteName = this.state.noteNames[note % 12]
             if (noteName) {
-                console.log(this.state)
-                console.log(noteName)
-                this.setState({noteNate: noteName})
+                this.setState({noteName: noteName})
             }
         }
     }
@@ -131,9 +131,13 @@ class App extends Component {
         return Math.round( noteNum ) + 69;
     }
 
-    onStop(recordedBlob) {
+    onStop(recordedBlob) {}
 
+    getRandomNote = () => {
+        let noteToPlay = this.state.noteNames[Math.floor(Math.random() * 11)]
+        this.setState({noteToPlay: noteToPlay})
     }
+
 
     render() {
         return (
@@ -148,6 +152,12 @@ class App extends Component {
                         backgroundColor="#fff"/>
                 </div>
 
+                {this.state.noteToPlay &&
+                    <div>
+                        <Button primary onClick={this.getRandomNote}>New note</Button>
+                        <h1>Play a {this.state.noteToPlay}</h1>
+                    </div>
+                }
                 <h1>{this.state.noteName}</h1>
 
                 <Button primary onClick={this.startRecording}>Start</Button>
