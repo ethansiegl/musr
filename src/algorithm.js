@@ -13,7 +13,7 @@ export function autoCorrelate (buf, sampleRate) {
     }
 
     rms = Math.sqrt(rms / size);
-    if (rms < 0.01) //not enough signal
+    if (rms < 0.08) //not enough signal
         return -1
 
     let lastCorrelation = 1;
