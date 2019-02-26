@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import './App.css';
 import { ReactMic } from 'react-mic';
-import { Button, Menu, Container } from 'semantic-ui-react';
+import { Button, Menu, Container, Icon } from 'semantic-ui-react';
 import { autoCorrelate } from './algorithm';
 
 class App extends Component {
@@ -23,6 +23,13 @@ class App extends Component {
             noteToPlay: null,
         }
     }
+
+    componentDidUpdate = () => {
+        if (this.state.noteToPlay === this.state.noteInput) {
+            this.setState({ record: false, inputNote: '-', noteToPlay: '-', isCorrect: true })
+        }
+    }
+
 
     startRecording = () => {
         this.getRandomNote();
@@ -80,33 +87,17 @@ class App extends Component {
         return Math.round(noteNum) + 69;
     }
 
-    onStop = (recordedBlob) => {
-    }
-
     getRandomNote = () => {
         let noteToPlay = this.state.noteNames[ Math.floor(Math.random() * 11) ]
-        this.setState({ noteToPlay: noteToPlay, record: true, isCorrect: false })
+        this.setState({ noteToPlay: noteToPlay, record: true, isCorrect: false, noteInput: '-' })
     }
-
-    isPlayedNoteCorrect = () => {
-        if (this.state.noteToPlay === this.state.noteInput) {
-            this.stopRecording()
-            //return
-        }
-    }
-
-    componentDidUpdate = () => {
-        if (this.state.noteToPlay === this.state.noteInput) {
-            this.setState({ record: false, inputNote: '-', noteToPlay: '-', isCorrect: true })
-        }
-    }
-
 
     render() {
         return (
             <React.Fragment>
                 {/* Header */}
                 <Menu borderless style={{ marginBottom: '2em' }}>
+                    <Menu.Item header><Icon name='music' size='large' /></Menu.Item>
                     <Menu.Item header>Musr</Menu.Item>
                 </Menu>
 
@@ -116,10 +107,7 @@ class App extends Component {
 
                     {/* Mic */}
                     <div style={{ display: 'none' }}>
-                        <ReactMic
-                            record={this.state.record}
-                            onStop={this.onStop}
-                            onData={this.onData}/>
+                        <ReactMic  record={this.state.record} onData={this.onData}/>
                     </div>
 
                     <h1>{this.state.noteInput}</h1>
