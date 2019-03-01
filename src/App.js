@@ -3,6 +3,7 @@ import './App.css';
 import { ReactMic } from 'react-mic';
 import { Button, Menu, Container, Icon } from 'semantic-ui-react';
 import { autoCorrelate } from './algorithm';
+import { FFT }  from 'fft'
 
 class App extends Component {
     /* Original author
@@ -16,7 +17,8 @@ class App extends Component {
             analyzer: null,
             freeze: null,
             mediaStreamSource: null,
-            buf: new Float32Array(1024),
+            buf: null,
+            buf2: null,
             noteNames: [ "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" ],
             noteInput: '-',
             isCorrect: false,
@@ -36,13 +38,15 @@ class App extends Component {
         let audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
         // exposes frequency data on stream
-        let analyzer = audioContext.createAnalyser();
-        analyzer.fftSize = 2048;
+        let analyser = audioContext.createAnalyser();
+        analyser.fftSize = 1024;
 
         this.setState({
             record: true,
+            buf: new Float32Array(analyser.fftSize),
+            buf2: new Uint8Array(analyser.fftSize),
             audioContext: audioContext,
-            analyzer: analyzer
+            analyzer: analyser
         });
     }
 
@@ -66,9 +70,40 @@ class App extends Component {
         }
     }
 
+
+    fourier = (in_array) => {
+        /* This is a very slow implementation */
+        let len = in_array.length;
+        let output = [];
+
+        for (let k = 0; k < len; k++) {
+            let real = 0;
+            let imag = 0;
+            for (let n = 0; n < len; n++) {
+                real += in_array[n] * Math.cos(-2 * Math.PI * k * n / len);
+                imag += in_array[n] * Math.sin(-2 * Math.PI * k * n / len);
+            }
+            output.push([real, imag]);
+        }
+        return output;
+    };
+
     updatePitch = () => {
         //copy waveform data into a Float32Array
         this.state.analyzer.getFloatTimeDomainData(this.state.buf);
+
+        //this.state.analyzer.getByteFrequencyData(this.state.buf2);
+        //this.state.analyzer.getFloatFrequencyData(this.state.buf);
+        console.log(this.fourier(this.state.buf));
+
+
+        //take this.state.buf which is the stream of audio data
+        //push it through a fourier transform to get the frequency data
+        //pull peak
+        //map frequency to pitch
+        //continue with logic
+
+
         let pitch = autoCorrelate(this.state.buf, this.state.audioContext.sampleRate);
 
         if (pitch === -1) {
@@ -106,8 +141,8 @@ class App extends Component {
                     <Button secondary onClick={this.stopRecording}>Stop</Button>
 
                     {/* Mic */}
-                    <div style={{ display: 'none' }}>
-                        <ReactMic  record={this.state.record} onData={this.onData}/>
+                    <div style={{ display: '' }}>
+                        <ReactMic record={this.state.record} onData={this.onData}/>
                     </div>
 
                     <h1>{this.state.noteInput}</h1>
