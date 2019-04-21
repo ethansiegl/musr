@@ -3,7 +3,6 @@ import './App.css';
 import { ReactMic } from 'react-mic';
 import { Button, Menu, Container, Icon } from 'semantic-ui-react';
 
-
 class App extends Component {
   constructor (props) {
     super(props);
@@ -78,11 +77,18 @@ class App extends Component {
         real += in_array[n] * Math.cos(-2 * Math.PI * k * n / len);
         imag += in_array[n] * Math.sin(-2 * Math.PI * k * n / len);
       }
-      output.push([real, imag]);
+
+      //get average
+      let real_sq = real * real;
+      let imag_sq = imag * imag;
+      let sum = real_sq + imag_sq;
+
+      let average = Math.sqrt(sum);
+
+      output.push(average);
     }
     return output;
   };
-
 
   getFrequency = () => {
     let sampleRate = 44100;
@@ -109,7 +115,7 @@ class App extends Component {
     //TODO
     //set this.state.buf to be stream of audio data - DONE
     //push it through a fourier transform to get the frequency data - DONE
-    //get loudest frequency - DONE
+    //get array of loudest frequencies and pick lowest
     //map frequency to pitch
     //continue with logic
 
@@ -120,20 +126,7 @@ class App extends Component {
 
     let output = this.fourier(this.state.buf);
 
-    //get sq root of square of each val
-    let outArr = [];
-    output.map((arr) => {
-      let out = null;
-      arr.map((num) => {
-        out += (num * num);
-      });
-      out = Math.sqrt(out);
-      outArr.push(out);
-      out = null;
-    });
-
-    this.setState({ fourierOutputArr: outArr });
-
+    this.setState({ fourierOutputArr: output });
     let frequency = this.getFrequency();
     console.log(frequency);
 
