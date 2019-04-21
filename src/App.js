@@ -2,170 +2,219 @@ import React, { Component } from 'react';
 import './App.css';
 import { ReactMic } from 'react-mic';
 import { Button, Menu, Container, Icon } from 'semantic-ui-react';
-import { autoCorrelate } from './algorithm';
-import { FFT }  from 'fft'
 
 class App extends Component {
-    /* Original author
-    * https://github.com/cwilso/pitchdetect
-    * */
-    constructor(props) {
-        super(props);
-        this.state = {
-            record: false,
-            context: null,
-            analyzer: null,
-            freeze: null,
-            mediaStreamSource: null,
-            buf: null,
-            buf2: null,
-            noteNames: [ "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" ],
-            noteInput: '-',
-            isCorrect: false,
-            noteToPlay: null,
-        }
-    }
-
-    componentDidUpdate = () => {
-        if (this.state.noteToPlay === this.state.noteInput) {
-            this.setState({ record: false, inputNote: '-', noteToPlay: '-', isCorrect: true })
-        }
-    }
-
-
-    startRecording = () => {
-        this.getRandomNote();
-        let audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-        // exposes frequency data on stream
-        let analyser = audioContext.createAnalyser();
-        analyser.fftSize = 1024;
-
-        this.setState({
-            record: true,
-            buf: new Float32Array(analyser.fftSize),
-            buf2: new Uint8Array(analyser.fftSize),
-            audioContext: audioContext,
-            analyzer: analyser
-        });
-    }
-
-    stopRecording = () => {
-        this.setState({
-            record: false,
-            noteInput: this.state.noteInput,
-            noteToPlay: this.state.noteToPlay,
-        });
-    }
-
-    onData = (recordedBlob) => {
-        const constraints = { audio: true };
-
-        if (this.state.record) {
-            window.navigator.mediaDevices.getUserMedia(constraints).then(mediaStream => {
-                let mediaStreamSource = this.state.audioContext.createMediaStreamSource(mediaStream);
-                mediaStreamSource.connect(this.state.analyzer);
-                this.updatePitch();
-            })
-        }
-    }
-
-
-    fourier = (in_array) => {
-        /* This is a very slow implementation */
-        let len = in_array.length;
-        let output = [];
-
-        for (let k = 0; k < len; k++) {
-            let real = 0;
-            let imag = 0;
-            for (let n = 0; n < len; n++) {
-                real += in_array[n] * Math.cos(-2 * Math.PI * k * n / len);
-                imag += in_array[n] * Math.sin(-2 * Math.PI * k * n / len);
-            }
-            output.push([real, imag]);
-        }
-        return output;
+  constructor (props) {
+    super(props);
+    this.state = {
+      record: false,
+      context: null,
+      analyzer: null,
+      freeze: null,
+      mediaStreamSource: null,
+      buf: null,
+      buf2: null,
+      noteNames: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
+      noteInput: '-',
+      isCorrect: false,
+      noteToPlay: null,
+      fourierOutputArr: null
     };
+  }
 
-    updatePitch = () => {
-        //copy waveform data into a Float32Array
-        this.state.analyzer.getFloatTimeDomainData(this.state.buf);
+  componentDidUpdate = () => {
+    if (this.state.noteToPlay === this.state.noteInput) {
+      this.setState({ record: false, inputNote: '-', noteToPlay: '-', isCorrect: true });
+    }
+  };
 
-        //this.state.analyzer.getByteFrequencyData(this.state.buf2);
-        //this.state.analyzer.getFloatFrequencyData(this.state.buf);
-        console.log(this.fourier(this.state.buf));
+  startRecording = () => {
+    this.getRandomNote();
+    let audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
+    // exposes frequency data on stream
+    let analyser = audioContext.createAnalyser();
+    analyser.fftSize = 2048;
 
-        //take this.state.buf which is the stream of audio data
-        //push it through a fourier transform to get the frequency data
-        //pull peak
-        //map frequency to pitch
-        //continue with logic
+    this.setState({
+      record: true,
+      buf: new Float32Array(analyser.fftSize),
+      buf2: new Uint8Array(analyser.fftSize),
+      audioContext: audioContext,
+      analyzer: analyser
+    });
+  };
 
+  stopRecording = () => {
+    this.setState({
+      record: false,
+      noteInput: this.state.noteInput,
+      noteToPlay: this.state.noteToPlay,
+    });
+  };
 
-        let pitch = autoCorrelate(this.state.buf, this.state.audioContext.sampleRate);
+  onData = (recordedBlob) => {
+    const constraints = { audio: true };
 
-        if (pitch === -1) {
-            //sound is too soft to process
-        } else {
-            let note = this.noteFromPitch(pitch)
-            let noteName = this.state.noteNames[ note % 12 ]
-            if (noteName) {
-                this.setState({ noteInput: noteName })
-            }
-        }
+    if (this.state.record) {
+      window.navigator.mediaDevices.getUserMedia(constraints).then(mediaStream => {
+        let mediaStreamSource = this.state.audioContext.createMediaStreamSource(mediaStream);
+        mediaStreamSource.connect(this.state.analyzer);
+        this.updatePitch();
+      });
+    }
+  };
+
+  fourier = (in_array) => {
+    /* This is a very slow implementation */
+    let len = in_array.length;
+    let output = [];
+
+    for (let k = 0; k < len; k++) {
+      let real = 0;
+      let imag = 0;
+      for (let n = 0; n < len; n++) {
+        real += in_array[n] * Math.cos(-2 * Math.PI * k * n / len);
+        imag += in_array[n] * Math.sin(-2 * Math.PI * k * n / len);
+      }
+      output.push([real, imag]);
+    }
+    return output;
+  };
+
+  processRawFourier = (output) => {
+    //TODO combine with original Fourier transform
+    //multiple together real and imag number, get square root, and put in new array
+    let outArr = [];
+    output.map((arr) => {
+      let out = null;
+      arr.map((num) => {
+        out += (num * num);
+      });
+      out = Math.sqrt(out);
+      outArr.push(out);
+      out = null;
+    });
+  }
+
+  getFrequency = () => {
+    let sampleRate = 44100;
+    let nyquist = sampleRate / 2;
+    let spectrum = this.state.fourierOutputArr;
+    let numberOfBins = spectrum.length;
+    let maxAmp = 0;
+    let largestBin;
+
+    for (let i = 0; i < numberOfBins; i++) {
+      let thisAmp = spectrum[i]; // amplitude of current bin
+      if (thisAmp > maxAmp) {
+        maxAmp = thisAmp;
+        largestBin = i;
+      }
     }
 
-    noteFromPitch = (frequency) => {
-        let noteNum = 12 * (Math.log(frequency / 440) / Math.log(2))
-        return Math.round(noteNum) + 69;
-    }
+    let loudestFreq = largestBin * (nyquist / numberOfBins);
+    return loudestFreq;
 
-    getRandomNote = () => {
-        let noteToPlay = this.state.noteNames[ Math.floor(Math.random() * 11) ]
-        this.setState({ noteToPlay: noteToPlay, record: true, isCorrect: false, noteInput: '-' })
-    }
+  };
 
-    render() {
-        return (
-            <React.Fragment>
-                {/* Header */}
-                <Menu borderless style={{ marginBottom: '2em' }}>
-                    <Menu.Item header><Icon name='music' size='large' /></Menu.Item>
-                    <Menu.Item header>Musr</Menu.Item>
-                </Menu>
+  updatePitch = () => {
+    //TODO
+    //set this.state.buf to be stream of audio data - DONE
+    //push it through a fourier transform to get the frequency data - DONE
+    //get loudest frequency - DONE
+    //map frequency to pitch
+    //continue with logic
 
-                <Container text>
-                    <Button primary onClick={this.startRecording}>Start</Button>
-                    <Button secondary onClick={this.stopRecording}>Stop</Button>
+    //copy waveform data into a Float32Array
+    this.state.analyzer.getFloatTimeDomainData(this.state.buf);
+    //this.state.analyzer.getByteFrequencyData(this.state.buf2);
+    //this.state.analyzer.getFloatFrequencyData(this.state.buf);
 
-                    {/* Mic */}
-                    <div style={{ display: '' }}>
-                        <ReactMic record={this.state.record} onData={this.onData}/>
-                    </div>
+    let rawFourierOutput = this.fourier(this.state.buf);
+    let fourierOut = this.processRawFourier(rawFourierOutput);
 
-                    <h1>{this.state.noteInput}</h1>
+    this.setState({ fourierOutputArr: fourierOut });
 
-                    {/* Allow user to toggle new note */}
-                    {this.state.record &&
-                    <div>
-                        <br/>
-                        <h1>Play {this.state.noteToPlay}</h1>
-                    </div>
-                    }
+    let frequency = this.getFrequency();
+    console.log(frequency);
 
-                    {this.state.isCorrect &&
-                    <div>
-                        <Button primary onClick={this.getRandomNote}>New note</Button>
-                        <h1>Good job!</h1>
-                    </div>
-                    }
+    // let pitch = autoCorrelate(this.state.buf, this.state.audioContext.sampleRate);
 
-                </Container>
-            </React.Fragment>
-        );
-    }
+    // let pitch = this.getFrequency();
+    //
+    // if (pitch === -1) {
+    //   //sound is too soft to process
+    // } else {
+    //   let note = this.noteFromPitch(pitch);
+    //   let noteName = this.state.noteNames[note % 12];
+    //   if (noteName) {
+    //     this.setState({ noteInput: noteName });
+    //   }
+    // }
+  };
+
+  noteFromPitch = (frequency) => {
+    let noteNum = 12 * (Math.log(frequency / 440) / Math.log(2));
+    return Math.round(noteNum) + 69;
+  };
+
+  getRandomNote = () => {
+    let noteToPlay = this.state.noteNames[Math.floor(Math.random() * 11)];
+    this.setState({ noteToPlay: noteToPlay, record: true, isCorrect: false, noteInput: '-' });
+  };
+
+  render () {
+    return (
+      <React.Fragment>
+        {/* Header */}
+        <Menu borderless style={{ marginBottom: '2em' }}>
+          <Menu.Item header><Icon name='music' size='large'/></Menu.Item>
+          <Menu.Item header>Musr</Menu.Item>
+        </Menu>
+
+        <Container text>
+          <Button primary onClick={this.startRecording}>Start</Button>
+          <Button secondary onClick={this.stopRecording}>Stop</Button>
+
+          {/* Mic */}
+          <div style={{ display: '' }}>
+            <ReactMic record={this.state.record} onData={this.onData}/>
+          </div>
+
+          <h1>{this.state.noteInput}</h1>
+
+          {/* Allow user to toggle new note */}
+          {this.state.record &&
+          <div>
+            <br/>
+            <h1>Play {this.state.noteToPlay}</h1>
+          </div>
+          }
+
+          {this.state.isCorrect &&
+          <div>
+            <Button primary onClick={this.getRandomNote}>New note</Button>
+            <h1>Good job!</h1>
+          </div>
+          }
+
+          {/*<Plot*/}
+          {/*data={[*/}
+          {/*{*/}
+          {/*x: [1, 2, 3],*/}
+          {/*y: [2, 6, 3],*/}
+          {/*mode: 'line',*/}
+          {/*marker: {color: 'red'},*/}
+          {/*},*/}
+          {/*]}*/}
+          {/*layout={ {width: 920, height: 640, title: ''} }*/}
+          {/*/>*/}
+
+        </Container>
+      </React.Fragment>
+    );
+  }
 }
 
 export default App;
