@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import './App.css';
 import { ReactMic } from 'react-mic';
 import { Button, Menu, Container, Icon } from 'semantic-ui-react';
+import { note_freqs } from './note_freqs';
 
 class App extends Component {
   constructor (props) {
@@ -13,8 +14,6 @@ class App extends Component {
       freeze: null,
       mediaStreamSource: null,
       buf: null,
-      buf2: null,
-      noteNames: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
       noteInput: '-',
       isCorrect: false,
       noteToPlay: null,
@@ -103,9 +102,9 @@ class App extends Component {
     for (let i = 0; i < numberOfBins; i++) {
       let thisAmp = spectrum[i];    // amplitude of current bin
       if (thisAmp < 0.6) {          //threshold
-        continue
+        continue;
       }
-      // console.log(thisAmp)
+
       if (thisAmp > maxAmp) {
         maxAmp = thisAmp;
         largestBin = i;
@@ -114,7 +113,6 @@ class App extends Component {
 
     let loudestFreq = largestBin * (nyquist / numberOfBins);
     return Math.round(loudestFreq);
-
   };
 
   updatePitch = () => {
@@ -123,51 +121,49 @@ class App extends Component {
     //push it through a fourier transform to get the frequency data - DONE
     //get array of loudest frequencies and pick lowest - DONE
     //map fundamental to pitch
+    //change fourier transform to FFT using P5 library
 
     //copy waveform data into a Float32Array
     this.state.analyzer.getFloatTimeDomainData(this.state.buf);
-    //this.state.analyzer.getByteFrequencyData(this.state.buf2);
-    //this.state.analyzer.getFloatFrequencyData(this.state.buf);
 
     let output = this.fourier(this.state.buf);
-
     this.setState({ fourierOutputArr: output });
+
     let frequency = this.getFrequency();
 
     let overtones = this.state.overtones;
     if (!overtones.includes(frequency) && frequency > 0) {
-      overtones.push(frequency)
+      overtones.push(frequency);
     }
 
-    overtones = overtones.sort(function(a, b){return a-b});
-    let fundamental = overtones[0];
-    console.log(fundamental)
+    //todo don't store frequencies below lowest pitch
+    overtones = overtones.sort(function (a, b) {return a - b;});
+    console.log(overtones);
+    // let fundamental = overtones[0];
 
+    let note = this.noteFromFrequency(overtones);
 
+    this.setState({ noteInput: note });
 
-
-    // let pitch = autoCorrelate(this.state.buf, this.state.audioContext.sampleRate);
-    // let pitch = this.getFrequency();
-    //
-    // if (pitch === -1) {
-    //   //sound is too soft to process
-    // } else {
-    //   let note = this.noteFromPitch(pitch);
-    //   let noteName = this.state.noteNames[note % 12];
-    //   if (noteName) {
-    //     this.setState({ noteInput: noteName });
-    //   }
-    // }
   };
 
-  noteFromPitch = (frequency) => {
-    let noteNum = 12 * (Math.log(frequency / 440) / Math.log(2));
-    return Math.round(noteNum) + 69;
+  noteFromFrequency = (overtones) => {
+    let buffer = 20;
+    for (let frequency in overtones) {
+      let min = note_freqs[this.state.noteToPlay] - buffer;
+      let max = note_freqs[this.state.noteToPlay] + buffer;
+      if (frequency > min && frequency < max) {
+        console.log('played the right note? ' + note_freqs[this.state.noteToPlay]);
+        this.setState({ record: false, inputNote: '-', noteToPlay: '-', isCorrect: true });
+      }
+    }
+
   };
 
   getRandomNote = () => {
-    let noteToPlay = this.state.noteNames[Math.floor(Math.random() * 11)];
-    this.setState({ noteToPlay: noteToPlay, record: true, isCorrect: false, noteInput: '-' });
+    let notes = Object.keys(note_freqs);
+    let randomNote = notes[Math.floor(Math.random() * 35) + 1];
+    this.setState({ noteToPlay: randomNote, record: true, isCorrect: false, noteInput: '-' });
   };
 
   render () {
@@ -184,8 +180,9 @@ class App extends Component {
           <Button secondary onClick={this.stopRecording}>Stop</Button>
 
           {/* Mic */}
-          <div style={{ display: '' }}>
-            <ReactMic record={this.state.record} onData={this.onData}/>
+          <div style={{ display: 'none' }}>
+            <ReactMic record={this.state.record}
+                      onData={this.onData}/>
           </div>
 
           <h1>{this.state.noteInput}</h1>
