@@ -3,6 +3,7 @@ import './App.css';
 import { ReactMic } from 'react-mic';
 import { Button, Menu, Container, Icon } from 'semantic-ui-react';
 
+
 class App extends Component {
   constructor (props) {
     super(props);
@@ -82,19 +83,6 @@ class App extends Component {
     return output;
   };
 
-  processRawFourier = (output) => {
-    //TODO combine with original Fourier transform
-    let outArr = [];
-    output.map((arr) => {
-      let out = null;
-      arr.map((num) => {
-        out += (num * num);
-      });
-      out = Math.sqrt(out);
-      outArr.push(out);
-      out = null;
-    });
-  }
 
   getFrequency = () => {
     let sampleRate = 44100;
@@ -130,16 +118,26 @@ class App extends Component {
     //this.state.analyzer.getByteFrequencyData(this.state.buf2);
     //this.state.analyzer.getFloatFrequencyData(this.state.buf);
 
-    let rawFourierOutput = this.fourier(this.state.buf);
-    let fourierOut = this.processRawFourier(rawFourierOutput);
+    let output = this.fourier(this.state.buf);
 
-    this.setState({ fourierOutputArr: fourierOut });
+    //get sq root of square of each val
+    let outArr = [];
+    output.map((arr) => {
+      let out = null;
+      arr.map((num) => {
+        out += (num * num);
+      });
+      out = Math.sqrt(out);
+      outArr.push(out);
+      out = null;
+    });
+
+    this.setState({ fourierOutputArr: outArr });
 
     let frequency = this.getFrequency();
     console.log(frequency);
 
     // let pitch = autoCorrelate(this.state.buf, this.state.audioContext.sampleRate);
-
     // let pitch = this.getFrequency();
     //
     // if (pitch === -1) {
