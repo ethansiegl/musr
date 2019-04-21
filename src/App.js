@@ -131,7 +131,7 @@ class App extends Component {
 
     for (let i = 0; i < numberOfBins; i++) {
       let thisAmp = spectrum[i];    // amplitude of current bin
-      if (thisAmp < 1.3) {          //threshold
+      if (thisAmp < 0.7) {          //threshold
         continue;
       }
 
