@@ -51,6 +51,7 @@ class App extends Component {
       record: false,
       noteInput: this.state.noteInput,
       noteToPlay: this.state.noteToPlay,
+      overtones: []
     });
   };
 
@@ -120,9 +121,8 @@ class App extends Component {
     //TODO
     //set this.state.buf to be stream of audio data - DONE
     //push it through a fourier transform to get the frequency data - DONE
-    //get array of loudest frequencies and pick lowest
-    //map frequency to pitch
-    //continue with logic
+    //get array of loudest frequencies and pick lowest - DONE
+    //map fundamental to pitch
 
     //copy waveform data into a Float32Array
     this.state.analyzer.getFloatTimeDomainData(this.state.buf);
@@ -133,7 +133,17 @@ class App extends Component {
 
     this.setState({ fourierOutputArr: output });
     let frequency = this.getFrequency();
-    console.log(frequency);
+
+    let overtones = this.state.overtones;
+    if (!overtones.includes(frequency) && frequency > 0) {
+      overtones.push(frequency)
+    }
+
+    overtones = overtones.sort(function(a, b){return a-b});
+    let fundamental = overtones[0];
+    console.log(fundamental)
+
+
 
 
     // let pitch = autoCorrelate(this.state.buf, this.state.audioContext.sampleRate);
@@ -194,18 +204,6 @@ class App extends Component {
             <h1>Good job!</h1>
           </div>
           }
-
-          {/*<Plot*/}
-          {/*data={[*/}
-          {/*{*/}
-          {/*x: [1, 2, 3],*/}
-          {/*y: [2, 6, 3],*/}
-          {/*mode: 'line',*/}
-          {/*marker: {color: 'red'},*/}
-          {/*},*/}
-          {/*]}*/}
-          {/*layout={ {width: 920, height: 640, title: ''} }*/}
-          {/*/>*/}
 
         </Container>
       </React.Fragment>
