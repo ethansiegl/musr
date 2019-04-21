@@ -84,7 +84,6 @@ class App extends Component {
 
   processRawFourier = (output) => {
     //TODO combine with original Fourier transform
-    //multiple together real and imag number, get square root, and put in new array
     let outArr = [];
     output.map((arr) => {
       let out = null;
