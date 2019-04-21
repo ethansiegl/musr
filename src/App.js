@@ -14,6 +14,7 @@ class App extends Component {
       freeze: null,
       mediaStreamSource: null,
       buf: null,
+      buf2: null,
       noteInput: '-',
       isCorrect: false,
       noteToPlay: null,
@@ -22,19 +23,13 @@ class App extends Component {
     };
   }
 
-  componentDidUpdate = () => {
-    if (this.state.noteToPlay === this.state.noteInput) {
-      this.setState({ record: false, inputNote: '-', noteToPlay: '-', isCorrect: true });
-    }
-  };
-
   startRecording = () => {
     this.getRandomNote();
     let audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
     // exposes frequency data on stream
     let analyser = audioContext.createAnalyser();
-    analyser.fftSize = 2048;
+    analyser.fftSize = 4096;
 
     this.setState({
       record: true,
@@ -91,38 +86,20 @@ class App extends Component {
     return output;
   };
 
-  getFrequency = () => {
-    let sampleRate = 44100;
-    let nyquist = sampleRate / 2;
-    let spectrum = this.state.fourierOutputArr;
-    let numberOfBins = spectrum.length;
-    let maxAmp = 0;
-    let largestBin;
-
-    for (let i = 0; i < numberOfBins; i++) {
-      let thisAmp = spectrum[i];    // amplitude of current bin
-      if (thisAmp < 0.6) {          //threshold
-        continue;
-      }
-
-      if (thisAmp > maxAmp) {
-        maxAmp = thisAmp;
-        largestBin = i;
-      }
-    }
-
-    let loudestFreq = largestBin * (nyquist / numberOfBins);
-    return Math.round(loudestFreq);
+  getRandomNote = () => {
+    let notes = Object.keys(note_freqs);
+    let randomNote = notes[Math.floor(Math.random() * 35) + 1];
+    this.setState({ noteToPlay: randomNote, record: true, isCorrect: false, noteInput: '-' });
   };
 
   updatePitch = () => {
     //TODO
+    //map fundamental to pitch - DONE
     //get fundamental pitch from series of overtones more reliably
-    //map fundamental to pitch
-    //change fourier transform to FFT using P5 library
 
     //copy waveform data into a Float32Array
     this.state.analyzer.getFloatTimeDomainData(this.state.buf);
+    //this.state.analyzer.getByteFrequencyData(this.state.buf2);
 
     let output = this.fourier(this.state.buf);
     this.setState({ fourierOutputArr: output });
@@ -144,37 +121,54 @@ class App extends Component {
 
   };
 
-  noteFromFrequency = (overtones) => {
-    let buffer = 20;
-    // console.log(overtones);
-    // console.log('note to play: ', this.state.noteToPlay);
-    // console.log('frequency to play: ', note_freqs[this.state.noteToPlay]);
-    // console.log('min: ', note_freqs[this.state.noteToPlay] - buffer);
-    // console.log('max: ', note_freqs[this.state.noteToPlay] + buffer);
+  getFrequency = () => {
+    let sampleRate = 44100;
+    let nyquist = sampleRate / 2;
+    let spectrum = this.state.fourierOutputArr;
+    let numberOfBins = spectrum.length;
+    let maxAmp = 0;
+    let largestBin;
 
+    for (let i = 0; i < numberOfBins; i++) {
+      let thisAmp = spectrum[i];    // amplitude of current bin
+      if (thisAmp < 1.3) {          //threshold
+        continue;
+      }
+
+      if (thisAmp > maxAmp) {
+        maxAmp = thisAmp;
+        largestBin = i;
+      }
+    }
+
+    let loudestFreq = largestBin * (nyquist / numberOfBins);
+    return Math.round(loudestFreq);
+  };
+
+
+  noteFromFrequency = (overtones) => {
+    console.log(overtones);
+    console.log('note to play: ', this.state.noteToPlay);
+    console.log('frequency to play: ', note_freqs[this.state.noteToPlay]);
+    console.log('min: ', note_freqs[this.state.noteToPlay] - 20);
+    console.log('max: ', note_freqs[this.state.noteToPlay] + 20);
+
+    let buffer = 20;
     for (let frequency in overtones) {
       let min = note_freqs[this.state.noteToPlay] - buffer;
       let max = note_freqs[this.state.noteToPlay] + buffer;
       let freq = overtones[frequency];
       if (freq > min && freq < max) {
-        // this.setState({ noteInput: note_freqs[this.state.noteToPlay] })
         this.setState({ record: false, inputNote: '-', noteToPlay: '-', isCorrect: true });
       }
     }
   }
-
-  getRandomNote = () => {
-    let notes = Object.keys(note_freqs);
-    let randomNote = notes[Math.floor(Math.random() * 35) + 1];
-    this.setState({ noteToPlay: randomNote, record: true, isCorrect: false, noteInput: '-' });
-  };
 
   render () {
     return (
       <React.Fragment>
         {/* Header */}
         <Menu borderless style={{ marginBottom: '2em' }}>
-          <Menu.Item header><Icon name='music' size='large'/></Menu.Item>
           <Menu.Item header>Musr</Menu.Item>
         </Menu>
 
