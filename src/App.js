@@ -117,9 +117,7 @@ class App extends Component {
 
   updatePitch = () => {
     //TODO
-    //set this.state.buf to be stream of audio data - DONE
-    //push it through a fourier transform to get the frequency data - DONE
-    //get array of loudest frequencies and pick lowest - DONE
+    //get fundamental pitch from series of overtones more reliably
     //map fundamental to pitch
     //change fourier transform to FFT using P5 library
 
@@ -138,7 +136,6 @@ class App extends Component {
 
     //todo don't store frequencies below lowest pitch
     overtones = overtones.sort(function (a, b) {return a - b;});
-    console.log(overtones);
     // let fundamental = overtones[0];
 
     let note = this.noteFromFrequency(overtones);
@@ -149,16 +146,22 @@ class App extends Component {
 
   noteFromFrequency = (overtones) => {
     let buffer = 20;
+    // console.log(overtones);
+    // console.log('note to play: ', this.state.noteToPlay);
+    // console.log('frequency to play: ', note_freqs[this.state.noteToPlay]);
+    // console.log('min: ', note_freqs[this.state.noteToPlay] - buffer);
+    // console.log('max: ', note_freqs[this.state.noteToPlay] + buffer);
+
     for (let frequency in overtones) {
       let min = note_freqs[this.state.noteToPlay] - buffer;
       let max = note_freqs[this.state.noteToPlay] + buffer;
-      if (frequency > min && frequency < max) {
-        console.log('played the right note? ' + note_freqs[this.state.noteToPlay]);
+      let freq = overtones[frequency];
+      if (freq > min && freq < max) {
+        // this.setState({ noteInput: note_freqs[this.state.noteToPlay] })
         this.setState({ record: false, inputNote: '-', noteToPlay: '-', isCorrect: true });
       }
     }
-
-  };
+  }
 
   getRandomNote = () => {
     let notes = Object.keys(note_freqs);
