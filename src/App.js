@@ -18,7 +18,8 @@ class App extends Component {
       noteInput: '-',
       isCorrect: false,
       noteToPlay: null,
-      fourierOutputArr: null
+      fourierOutputArr: null,
+      overtones: []
     };
   }
 
@@ -99,7 +100,11 @@ class App extends Component {
     let largestBin;
 
     for (let i = 0; i < numberOfBins; i++) {
-      let thisAmp = spectrum[i]; // amplitude of current bin
+      let thisAmp = spectrum[i];    // amplitude of current bin
+      if (thisAmp < 0.6) {          //threshold
+        continue
+      }
+      // console.log(thisAmp)
       if (thisAmp > maxAmp) {
         maxAmp = thisAmp;
         largestBin = i;
@@ -107,7 +112,7 @@ class App extends Component {
     }
 
     let loudestFreq = largestBin * (nyquist / numberOfBins);
-    return loudestFreq;
+    return Math.round(loudestFreq);
 
   };
 
@@ -129,6 +134,7 @@ class App extends Component {
     this.setState({ fourierOutputArr: output });
     let frequency = this.getFrequency();
     console.log(frequency);
+
 
     // let pitch = autoCorrelate(this.state.buf, this.state.audioContext.sampleRate);
     // let pitch = this.getFrequency();
